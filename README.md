@@ -8,23 +8,29 @@ https://www.digitalocean.com/community/tutorials/how-to-use-postgresql-with-your
 
 Note: my instructions below are old, but you may find them helpful--and a good cheatsheet from time to time. I believe the current stable version is 9.3.x...at the most recent updating these instructions. Minor tweaks to my commands may be necessary to accommodate the most recent version.
 
-Throughout the following instructions, I use angle brackets < > to indicate values you must type / fill-in at the command line. 
+Throughout the following instructions... 
+
+- angle brackets < > indicate values you must type or fill-in at the command line
+- Ubuntu commands may or may not be prefaced with the $ BASH shell prompt
+- PostgreSQL commands may or may not be prefaced pwith the postgres=# shell prompt
+
+Feel free to clean the above indicators up and commit your changes to this doc. I'd appreciate that. :-) 
 
 
 ---
-#INSTALLING POSTGRESQL
+##INSTALLING POSTGRESQL
 ---
 
 You can install PostgreSQL system wide with sudo apt-get...or you can use pip and manage its installation Pythonically rather than through Ubuntu's package manager.
 
 
 ---
-#CREATE (OR RECREATE) A DATABASE
+##CREATE (OR RECREATE) A DATABASE FROM SCRATCH
 ---
 
-##STEP 1: LOGIN TO THE POSTGRES SHELL
+###STEP 1: LOGIN TO THE POSTGRES SHELL
 
-psql -U postgres -h localhost
+    psql -U postgres -h localhost
 
 You will be prompted for a password.  The password is 'postgres'.
 
@@ -40,10 +46,10 @@ From here on forward, throughout these instructions, this...
 
     postgres=#
 
-...represents the prompt in the postgres shell.
+represents the prompt in the postgres shell.
 
 
-##CREATE A SUPERUSER (IF IT DOES NOT ALREADY EXIST)
+###STEP 2: CREATE A SUPERUSER (IF IT DOES NOT ALREADY EXIST)
 
 In this case, $USER is an environment variable which may need to be defined (probably in your ~/.bashrc file) prior to executing these commands. You can also explicitly enter the user when prompted.
 
@@ -51,38 +57,42 @@ In this case, $USER is an environment variable which may need to be defined (pro
 
     \password postgres
 
-...ctrl+D to exit PostgreSQL prompt
+Enter ctrl+D to exit the PostgreSQL prompt.
 
-    sudo -u postgres createdb <dbname>
-
-...or simpler...
+You can also create the superuser from the Ubuntu command line...
 
     sudo -u postgres createuser --superuser $USER
     sudo -u postgres psql
 
     postgres=# \password $USER
+    
+Likewise, the database can be created from Ubuntu's command line...
 
-Client programs, by default, connect to the local host using your Ubuntu login name and expect to find a database with that name too. So to make things REALLY easy, use your new superuser privileges granted above to create a database with the same name as your login name:
+    sudo -u postgres createdb <dbname>
+
+Client programs on Ubuntu, by default, connect to the localhost using your Ubuntu login name and expect to find a database with that name, too. So to make things REALLY easy, use your new superuser privileges granted above to create a database with the same name as your login name:
 
     createdb $USER
 
-That means, to make things stupidly easy locally, set the db name and the superuser name to the same value as your Ubuntu login name.
+That means, to make things very simple locally, set the db name and the superuser name to the same value as your Ubuntu login name.
 
 
-##CONNECT TO THE NEW DB LOCALLY
+###STEP 3: CONNECT TO THE NEW DB LOCALLY
 
 If you do the above, connecting to your own database locally to try out some SQL should now be as easy as:
 
     psql
 
+The above will get you going, but we need a way to be more explicit about the superuser we're creating, and about the name of the database itself...
 
-##STEP 2 (ALTERNATE): CREATE A NEW SUPERUSER FROM THE POSTGRESQL SHELL
 
-The above really applies only to local development. This way is more broadly applicable...
+###STEP 2 (ALTERNATE): CREATE A NEW USER FROM THE POSTGRESQL SHELL
+
+The above really applies only to local development. This way is more broadly applicable than outlined thus far...
 
 Login to the PostgreSQL as the postgres user--same as above.
 
-Now, we'll create a hypothetical new superuser named John...
+Now, we'll create a hypothetical new user named John... John will not have superuser powers at first.
 
 Type the following SQL command to create a user john with myPassword as his password:
 
@@ -91,8 +101,10 @@ Type the following SQL command to create a user john with myPassword as his pass
 More info here on how to add a user can be found here...
 http://www.cyberciti.biz/faq/howto-add-postgresql-user-account/
 
+If you use this method, you will only be able to login to PostgreSQL as the postgres user, or the user you specify in the in your CREATE USER command.
 
-##STEP 3: CREATE THE NEW DATABASE; ASSIGN AN OWNER OR CHANGE THE OWNER
+
+###STEP 4: CREATE A NEW DATABASE; ASSIGN AN OWNER OR CHANGE THE OWNER
 
 Type the following command to create a database named 'jane':
 
@@ -105,7 +117,7 @@ Type the following command to create a database named 'jane':
 
 ##STEP 4: GIVE THE NEW USER SUPER POWERS ON YOUR NEW DATABASE
 
-Grant all privileges on database jane to user john...
+Now, let's grant all privileges on database jane to user john...thus, making John a superuser.
 
     postgres=# GRANT ALL PRIVILEGES ON DATABASE jane to john;
 
@@ -116,6 +128,8 @@ So, now we have things set-up like so...
 - superuser's password = myPassword
 
 If you're using Django, make adjustments to the appropriate settings.py file accordingly. You will also need to point the settings file to the appropriate database URL or IP if you are not developing locally.
+
+If you are setting up an existing Django project from a private repo, there may be existing database name, database user name, and database user password info in the repo. Best practice suggests these secret config values should be handled by each developer with environment variables. Refer to the Two Scoops book.
 
 
 ##STEP 5: START OR RESTART THE DATABASE SERVER
@@ -139,7 +153,7 @@ Sometimes, you may need to include a flag, like...
 
     python manage.py syncdb --noinput
 
-See the Django docs for more info.
+See the Two Scoops book and/or the official Django docs for more info on various manage.py commands and flags.
 
 If you're using South for migrations, execute the following command for each Django app...
 
@@ -149,7 +163,7 @@ Entering just...
 
     python manage.py migrate
     
-...migrates data for all tables.
+...migrates data for _all_ tables.
 
 Finally, you'll also need to load your test data via any fixtures, if they exist, like so...
 
@@ -187,6 +201,7 @@ Sometimes, when working--for instance--on a Django project, you want to blow awa
 You can achieve the same effect by dropping the database's default schema. If you do this, you'll have to immediately recreate that schema.
 
     drop schema public cascade;
+    
     create schema public;
 
 Alternately...
@@ -206,6 +221,7 @@ http://blog.impressiver.com/post/37947630374/drop-all-database-tables-for-a-djan
 Here the user is 'postgres'...
 
     sudo -u postgres psql
+    
     \password
 
     
@@ -217,7 +233,9 @@ Here the user is 'postgres'...
 ##OTHER MISC COMMANDS
 
     \? for help with psql commands (in regular SQL, this is \h )
+    
     \g or terminate with semicolon to execute query
+    
     \q to quit
 
 ---
@@ -251,21 +269,21 @@ Or:
 
 The answers are short. Below, for reference, if you are familiar with SQL, I've included the command in SQL, and follow those with the PostgreSQL shortcuts, as well as the full command in PostgreSQL.
 
-mysql: SHOW TABLES
-postgresql shortcut: \d
-postgresql full: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
+- mysql: SHOW TABLES
+- postgresql shortcut: \d
+- postgresql full: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
 
-mysql: SHOW DATABASES
-postgresql shortcut: \l
-postgresql full command: SELECT datname FROM pg_database;
+- mysql: SHOW DATABASES
+- postgresql shortcut: \l
+- postgresql full command: SELECT datname FROM pg_database;
 
-mysql: SHOW COLUMNS
-postgresql shortcut: \d table
-postgresql full command: SELECT column_name FROM information_schema.columns WHERE table_name ='table';
+- mysql: SHOW COLUMNS
+- postgresql shortcut: \d table
+- postgresql full command: SELECT column_name FROM information_schema.columns WHERE table_name ='table';
 
-mysql: DESCRIBE TABLE
-postgresql shortcut: \d+ table
-postgresql full command: SELECT column_name FROM information_schema.columns WHERE table_name ='table';
+- mysql: DESCRIBE TABLE
+- postgresql shortcut: \d+ table
+- postgresql full command: SELECT column_name FROM information_schema.columns WHERE table_name ='table';
 
 ---
 #WORKING ON THE DB THROUGH DJANGO
@@ -285,22 +303,22 @@ You can also open up a Python shell through the Django manage.py command, and in
 
 ...where you can execute Python commands to manipulate the database like so:
 
->>> from django.contrib.auth.models import User
->>> user = User.objects.create_user(username='john',
-...                                 email='jlennon@beatles.com',
-...                                 password='glass onion')
->>> user.is_superuser = True
->>> user.save()
+    >>> from django.contrib.auth.models import User
+    >>> user = User.objects.create_user(username='john',
+    ...                                 email='jlennon@beatles.com',
+    ...                                 password='glass onion')
+    >>> user.is_superuser = True
+    >>> user.save()
 
 Or...
 
->>> user = User.objects.get(username='john')
->>> user.set_password('goo goo goo joob')
->>> user.save()
+    >>> user = User.objects.get(username='john')
+    >>> user.set_password('goo goo goo joob')
+    >>> user.save()
 
 Or just...
 
-python manage.py createsuperuser --username=<username> --email=<user_email>
+    python manage.py createsuperuser --username=<username> --email=<user_email>
 
 If you're trying to create a superuser in Django, make sure you review the following...
 
